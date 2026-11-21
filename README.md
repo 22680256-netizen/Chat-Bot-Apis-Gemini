@@ -35,5 +35,3 @@ Una vez obtenida la clave personal (que empieza con `AIzaSy...`), la pueden usar
   ```env
   GEMINI_API_KEY=AIzaSy_tu_clave_personal_aqui
   ```
-
-*(Este aviso y la lista de tecnologías ya quedaron también documentados en el archivo [README.md](file:///C:/Users/joser/.gemini/antigravity/scratch/gemini-chatbot/README.md) del proyecto).*
