@@ -1,0 +1,9 @@
+# Este proyecto funciona al 100% con las librerías nativas de Python (sin necesidad de instalar nada).
+# Sin embargo, si deseas instalar librerías opcionales para extenderlo o usar el SDK oficial:
+
+# SDK oficial de Gemini (opcional):
+google-genai>=0.1.0
+
+# Para manejo avanzado de entorno y peticiones HTTP (opcional):
+python-dotenv>=1.0.0
+requests>=2.31.0

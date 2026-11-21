@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloraBot - Chatbot Botánico con Gemini y Base de Datos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-dark">
+  <div class="app-layout">
+    <!-- BARRA LATERAL / CONFIGURACIÓN -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-icon">🌿</div>
+          <div class="brand-text">
+            <h2>FloraBot</h2>
+            <span class="brand-sub">Gemini + Base de Datos SQLite</span>
+          </div>
+        </div>
+        <button class="icon-btn close-sidebar-btn" id="closeSidebarBtn" title="Cerrar panel">✕</button>
+      </div>
+
+      <div class="sidebar-actions">
+        <button class="btn btn-primary new-chat-btn" id="newChatBtn">
+          <span class="btn-icon">＋</span> Nueva Consulta
+        </button>
+        <button class="btn btn-secondary catalog-btn" id="openCatalogBtn">
+          <span class="btn-icon">📚</span> Ver Catálogo de Plantas
+        </button>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- SECCIÓN: SWITCH BASE DE DATOS -->
+        <div class="config-group db-status-card">
+          <div class="config-label-row">
+            <label class="config-label" for="useDbToggle">Base de Datos Botánica</label>
+            <span class="badge badge-success" id="dbTotalBadge">16 Plantas</span>
+          </div>
+          <label class="toggle-switch-container">
+            <input type="checkbox" id="useDbToggle" checked>
+            <span class="toggle-switch-slider"></span>
+            <span class="toggle-switch-text">RAG activo (Consulta SQLite)</span>
+          </label>
+          <small class="config-hint">Enriquece las respuestas con fichas verificadas de riego, luz, toxicidad y sustrato.</small>
+        </div>
+
+        <!-- SECCIÓN: MODELO -->
+        <div class="config-group">
+          <label class="config-label" for="modelSelect">
+            <span>Modelo de Gemini</span>
+          </label>
+          <select id="modelSelect" class="config-select">
+            <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Recomendado)</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Diagnósticos complejos)</option>
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Ultrarrápido)</option>
+            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Estable)</option>
+          </select>
+        </div>
+
+        <!-- SECCIÓN: TEMPERATURA -->
+        <div class="config-group">
+          <div class="config-label-row">
+            <label class="config-label" for="temperatureSlider">Creatividad (Temperatura)</label>
+            <span class="badge" id="tempValue">0.7</span>
+          </div>
+          <input type="range" id="temperatureSlider" min="0.0" max="1.5" step="0.1" value="0.7" class="config-slider">
+          <div class="slider-legend">
+            <span>Preciso (0.0)</span>
+            <span>Creativo (1.5)</span>
+          </div>
+        </div>
+
+        <!-- SECCIÓN: INSTRUCCIÓN DE SISTEMA -->
+        <div class="config-group">
+          <label class="config-label" for="systemInstructionInput">
+            <span>Rol del Asistente Botánico</span>
+          </label>
+          <textarea id="systemInstructionInput" class="config-textarea" rows="3" placeholder="Instrucción de sistema...">Eres FloraBot, un asistente botánico experto y cordial. Responde con precisión sobre riego, iluminación, sustrato y toxicidad para mascotas utilizando la base de datos.</textarea>
+        </div>
+
+        <!-- SECCIÓN: API KEY -->
+        <div class="config-group api-key-card">
+          <div class="config-label-row">
+            <label class="config-label" for="apiKeyInput">Gemini API Key</label>
+            <span class="status-indicator" id="keyStatus">Verificando...</span>
+          </div>
+          <div class="input-with-button">
+            <input type="password" id="apiKeyInput" class="config-input" placeholder="AIzaSy..." autocomplete="off">
+            <button class="icon-btn-toggle" id="toggleKeyVisibility" type="button" title="Mostrar/Ocultar clave">👁️</button>
+          </div>
+          <div class="api-key-footer">
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="link-small">
+              Obtener clave gratis en Google AI Studio ↗
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary clear-btn" id="clearChatBtn">
+          🗑️ Vaciar chat
+        </button>
+        <button class="theme-toggle-btn" id="themeToggleBtn" title="Cambiar tema claro/oscuro">
+          <span class="theme-icon">🌙</span> <span class="theme-text">Modo oscuro</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL DE CHAT -->
+    <main class="main-content">
+      <!-- HEADER PRINCIPAL -->
+      <header class="chat-header">
+        <div class="header-left">
+          <button class="icon-btn menu-btn" id="openSidebarBtn" title="Abrir configuración">
+            ☰
+          </button>
+          <div class="chat-title-info">
+            <h1 class="chat-title">FloraBot</h1>
+            <div class="chat-status-pill">
+              <span class="pulse-dot"></span>
+              <span id="activeModelLabel">gemini-2.5-flash</span>
+              <span class="pill-divider">•</span>
+              <span class="db-pill-label">SQLite Activa</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="header-btn" id="headerCatalogBtn" title="Explorar plantas">
+            🪴 Catálogo
+          </button>
+          <button class="header-btn" id="exportChatBtn" title="Descargar conversación en Markdown">
+            📥 Exportar
+          </button>
+        </div>
+      </header>
+
+      <!-- VENTANA DE MENSAJES -->
+      <div class="messages-container" id="messagesContainer">
+        <!-- VISTA DE BIENVENIDA -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-sparkle">🪴</div>
+          <h2 class="welcome-title">¡Hola! Soy tu Asistente Botánico</h2>
+          <p class="welcome-subtitle">
+            Combino la inteligencia de <strong>Google Gemini</strong> con una <strong>base de datos botánica SQLite</strong> para responder dudas de riego, luz, cuidados, enfermedades y seguridad de tus mascotas.
+          </p>
+
+          <div class="suggestion-grid">
+            <button class="suggestion-card" data-prompt="¿Cómo cuido mi Monstera Deliciosa y cada cuánto tiempo debo regarla?">
+              <span class="card-icon">🌿</span>
+              <span class="card-title">Cuidado de Monstera</span>
+              <span class="card-desc">Frecuencia de riego, luz y humedad</span>
+            </button>
+            <button class="suggestion-card" data-prompt="¿Qué plantas de interior son 100% seguras y no tóxicas para gatos y perros (Pet Friendly)?">
+              <span class="card-icon">🐾</span>
+              <span class="card-title">Plantas Pet Friendly</span>
+              <span class="card-desc">Especies no tóxicas para mascotas</span>
+            </button>
+            <button class="suggestion-card" data-prompt="¿Por qué las hojas de mi planta se están poniendo amarillas y cómo puedo salvarla?">
+              <span class="card-icon">🩺</span>
+              <span class="card-title">Diagnóstico de Hojas</span>
+              <span class="card-desc">Causas de hojas amarillas y solución</span>
+            </button>
+            <button class="suggestion-card" data-prompt="Recomiéndame plantas de interior que sobrevivan en lugares con poca luz y requieran poco riego.">
+              <span class="card-icon">💡</span>
+              <span class="card-title">Plantas resistentes</span>
+              <span class="card-desc">Para principiantes y baja iluminación</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- LISTA DINÁMICA DE MENSAJES -->
+        <div class="messages-list" id="messagesList"></div>
+
+        <!-- INDICADOR DE CARGA (PENSANDO) -->
+        <div class="typing-indicator" id="typingIndicator" style="display: none;">
+          <div class="avatar bot-avatar">🌿</div>
+          <div class="typing-bubble">
+            <span class="typing-text">Consultando base de datos botánica y pensando</span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BARRA DE ENTRADA -->
+      <div class="input-area">
+        <form class="chat-form" id="chatForm">
+          <div class="input-wrapper">
+            <textarea
+              id="chatInput"
+              class="chat-input"
+              placeholder="Pregunta sobre cualquier planta, riego, luz o síntomas... (Enter para enviar)"
+              rows="1"
+              required
+            ></textarea>
+            <button type="submit" class="send-btn" id="sendBtn" title="Enviar pregunta">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </form>
+        <div class="input-footer">
+          <span>Respuestas fundamentadas en la base de datos botánica SQLite + Google Gemini.</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: CATÁLOGO DE PLANTAS DE LA BASE DE DATOS -->
+  <div class="modal-overlay" id="catalogModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">📚</span>
+          <h3>Base de Datos Botánica (SQLite)</h3>
+        </div>
+        <button class="icon-btn close-modal-btn" id="closeCatalogBtn">✕</button>
+      </div>
+      <div class="modal-search-bar">
+        <input type="text" id="catalogSearchInput" placeholder="Buscar por nombre, toxicidad, tipo (interior/exterior)..." class="config-input">
+      </div>
+      <div class="modal-body" id="catalogList">
+        <!-- Renderizado dinámico de tarjetas botánicas -->
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
